@@ -1,0 +1,19 @@
+---
+name: Manage Repo Labels
+
+on:
+  push:
+    branches:
+      - develop
+      - main
+    paths:
+      - .github/repo_labels.yml
+      - .github/workflows/manage_repo_labels.yml
+  workflow_dispatch:
+
+jobs:
+  manage-repo-labels:
+    name: Manage Repo Labels
+    uses: worgarside/github-config-files/.github/workflows/__manage_repo_labels.yml@main
+    permissions:
+      issues: write

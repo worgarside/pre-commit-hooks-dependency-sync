@@ -1,0 +1,46 @@
+---
+version: 1
+
+appendOnly: true
+
+labels:
+  - label: bug
+    branch: ^bugfix/.+$
+
+  - label: chore
+    branch: ^chore/.+$
+
+  - label: dependencies
+    files:
+      - ^Pipfile\.lock$
+      - ^poetry\.lock$
+      - ^requirements\.txt$
+
+  - label: dependencies
+    authors:
+      - dependabot[bot]
+      - pre-commit-ci[bot]
+
+  - label: documentation
+    files:
+      - ^docs/.+$
+      - ^.+\.md$
+
+  - label: enhancement
+    branch: ^feature/.+$
+
+  - label: github-actions
+    files:
+      - ^\.github/workflows/.+\.ya?ml$
+
+  - label: python
+    files:
+      - ^.+\.py$
+
+  - label: release
+    base-branch: ^main$
+    branch: ^release/.+$
+
+  - label: tests
+    files:
+      - ^tests/.+$
