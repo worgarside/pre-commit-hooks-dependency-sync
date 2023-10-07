@@ -50,7 +50,6 @@ repos:
           - -a
           - from __future__ import annotations
 
-
   - repo: https://github.com/jumanjihouse/pre-commit-hook-yamlfmt
     rev: 0.2.3
     hooks:
@@ -89,17 +88,9 @@ repos:
           - --strict
           - --show-error-codes
         additional_dependencies:
-          - types-requests
-          - types-paramiko
-          - boto3-stubs
-          - lxml-stubs
-          - types-flask
-          - types-Pillow
-          - types-setuptools
-          - types-tzlocal
-          - pydantic
+          - tomli==2.0.1
           - types-PyYAML
-          - types-python-dateutil
+          - types-setuptools
 
   - repo: local
     hooks:
@@ -115,6 +106,7 @@ repos:
         types:
           - python
         additional_dependencies:
+          - pylint==2.17.7
           - pylint-strict-informational
 
   - repo: https://github.com/pre-commit/pygrep-hooks
@@ -129,10 +121,10 @@ repos:
     hooks:
       - id: codespell
         additional_dependencies:
-          - tomli
+          - tomli==2.0.1
         args:
           - --skip
-          - '*.svg,*.json'
+          - '*.svg,*.json,*.lock'
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.0.291

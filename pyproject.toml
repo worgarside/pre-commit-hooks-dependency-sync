@@ -6,8 +6,19 @@ authors = ["Will Garside <worgarside@gmail.com>"]
 license = "MIT"
 readme = "README.md"
 
+[tool.poetry.scripts]
+sync-dependencies = "pre_commit_hooks_dependency_sync.main:main"
+
 [tool.poetry.dependencies]
 python = "^3.11"
+tomli = "^2.0.1"
+pyyaml = "^6.0.1"
+
+[tool.poetry.group.dev.dependencies]
+pylint = "<3.0.0"
+pytest = "^7.4.2"
+pytest-xdist = "^3.3.1"
+pytest-cov = "^4.1.0"
 
 [build-system]
 build-backend = "poetry.core.masonry.api"
