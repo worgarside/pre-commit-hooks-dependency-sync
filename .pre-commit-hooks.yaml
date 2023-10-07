@@ -2,7 +2,7 @@
   - id: sync-additional-dependencies
     name: Sync PCH Additional Dependencies
     description: Synchronize additional dependencies with poetry.lock
-    entry: poetry run validate-entities
+    entry: poetry run sync-dependencies
     language: python
     args: []
     additional_dependencies:
