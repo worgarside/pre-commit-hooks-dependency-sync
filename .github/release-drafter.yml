@@ -6,23 +6,56 @@ exclude-labels:
   - skip-changelog
   - sync
 categories:
+  # This section only applies to the Home Assistant repo but is included here
+  # for simplicity (doesn't affect other repos, cleaner to have one source of truth)
+  - title: 🏠 Home Assistant Updates
+    labels:
+      - ha:automations
+      - ha:config
+      - ha:cover
+      - ha:device-tracker
+      - ha:groups
+      - ha:input-boolean
+      - ha:input-button
+      - ha:input-datetime
+      - ha:input-number
+      - ha:input-select
+      - ha:input-text
+      - ha:lovelace
+      - ha:media-player
+      - ha:mqtt
+      - ha:pyscript
+      - ha:rest-command
+      - ha:scenes
+      - ha:scripts
+      - ha:sensors
+      - ha:switch
+      - ha:template
+      - ha:variables
+  - title: 💥 Breaking Changes
+    labels:
+      - major
   - title: 🚀 Features
     labels:
       - feature
       - enhancement
   - title: 🐛 Bug Fixes
     labels:
+      - patch
       - fix
       - bugfix
       - bug
   - title: 🧰 Maintenance
     labels:
       - chore
-      - dependencies
       - github-actions
       - maintenance
       - tools
+      - non-functional
+  - title: 🛠️ Dependencies
     collapse-after: 5
+    labels:
+      - dependencies
 change-template: '- $TITLE @$AUTHOR (#$NUMBER)'
 change-title-escapes: \<*_&
 template: |
@@ -46,7 +79,9 @@ version-resolver:
 exclude-contributors:
   - '@dependabot'
   - dependabot
+  - app/dependabot
   - dependabot[bot]
   - '@pre-commit-ci'
   - pre-commit-ci
+  - app/pre-commit-ci
   - pre-commit-ci[bot]
