@@ -1,0 +1,12 @@
+---
+  - id: sync-additional-dependencies
+    name: Sync PCH Additional Dependencies
+    description: Synchronize additional dependencies with poetry.lock
+    entry: poetry run sync-dependencies
+    language: python
+    args: []
+    additional_dependencies:
+      - poetry
+    always_run: true
+    require_serial: true
+    pass_filenames: false
