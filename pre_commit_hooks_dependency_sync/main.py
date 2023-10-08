@@ -18,12 +18,18 @@ PCH_CONFIG = REPO_PATH / ".pre-commit-config.yaml"
 ADD_DEP_PREFIX = r"(\s+-\s)"
 
 
-def get_replacements() -> dict[str, str]:
-    """Get a dictionary of dependencies to replace in the pre-commit config."""
-    with POETRY_LOCKFILE.open("rb") as poetry_lockfile:
+def get_poetry_packages(lockfile: Path) -> dict[str, str]:
+    """Get a dictionary of dependencies from the Poetry lockfile."""
+    with lockfile.open("rb") as poetry_lockfile:
         packages = load(poetry_lockfile).get("package", [])
 
-    installed = {package["name"]: package["version"] for package in packages}
+    return {package["name"]: package["version"] for package in packages}
+
+
+def get_replacements() -> dict[str, str]:
+    """Get a dictionary of dependencies to replace in the pre-commit config."""
+
+    installed = get_poetry_packages(POETRY_LOCKFILE)
 
     with PCH_CONFIG.open("r") as pch_config:
         config = safe_load(pch_config)
@@ -33,12 +39,22 @@ def get_replacements() -> dict[str, str]:
     for repo in config["repos"]:
         for hook in repo.get("hooks", []):
             for req in parse_requirements(hook.get("additional_dependencies", [])):
+                repl_pattern = (
+                    re.escape(req.key)
+                    + (r"\[.+\]" if req.extras else "")
+                    + re.escape(str(req.specifier))
+                )
+
                 if (
-                    target_version := installed.get(req.key)
-                ) and req.specifier != f"=={target_version}":
-                    replacements[
-                        f"{req.key}{req.specifier}"
-                    ] = f"{req.key}=={target_version}"
+                    repl_pattern not in replacements
+                    and (target_version := installed.get(req.key)) is not None
+                    and req.specifier != f"=={target_version}"
+                ):
+                    replacements[repl_pattern] = (
+                        req.key
+                        + (f"[{','.join(req.extras)}]" if req.extras else "")
+                        + f"=={target_version}"
+                    )
 
     return replacements
 
@@ -51,11 +67,13 @@ def main() -> None:
     updated_lines = []
     apply_updates = False
 
+    replacements = get_replacements()
+
     for line in lines:
         updated_line = line
-        for key, value in get_replacements().items():
+        for repl_pattern, value in replacements.items():
             updated_line = re.sub(
-                f"^{ADD_DEP_PREFIX}{re.escape(key)}$", f"\\1{value}", updated_line
+                f"^{ADD_DEP_PREFIX}{repl_pattern}$", f"\\1{value}", updated_line
             )
 
         apply_updates |= updated_line != line
