@@ -1,3 +1,7 @@
+[project]
+name = "pre-commit-hooks-dependency-sync"
+version = "1.0.1"
+
 [tool.poetry]
 name = "pre-commit-hooks-dependency-sync"
 version = "1.1.2"
@@ -6,18 +10,18 @@ authors = ["Will Garside <worgarside@gmail.com>"]
 license = "MIT"
 readme = "README.md"
 
-[tool.poetry.scripts]
+[project.scripts]
 sync-dependencies = "pre_commit_hooks_dependency_sync.main:main"
 
 [tool.poetry.dependencies]
-python = "^3.11"
+python = "~3.11"
 tomli = "^2.0.1"
 pyyaml = "^6.0.1"
 packaging = "^24.1"
 
 [build-system]
-build-backend = "poetry.core.masonry.api"
-requires = ["poetry-core"]
+requires = ["setuptools", "setuptools-scm"]
+build-backend = "setuptools.build_meta"
 
 # Tool Configs
 
