@@ -13,6 +13,7 @@ sync-dependencies = "pre_commit_hooks_dependency_sync.main:main"
 python = "^3.11"
 tomli = "^2.0.1"
 pyyaml = "^6.0.1"
+packaging = "^23.2"
 
 [build-system]
 build-backend = "poetry.core.masonry.api"

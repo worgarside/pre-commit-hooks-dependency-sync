@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-from pkg_resources import parse_requirements
+from packaging.requirements import Requirement
 from tomli import load
 from yaml import safe_load
 
@@ -36,20 +36,22 @@ def get_replacements() -> dict[str, str]:
 
     for repo in config["repos"]:
         for hook in repo.get("hooks", []):
-            for req in parse_requirements(hook.get("additional_dependencies", [])):
+            for req_str in hook.get("additional_dependencies", []):
+                req = Requirement(req_str)
+
                 repl_pattern = (
-                    re.escape(req.key)
+                    re.escape(req.name)
                     + (r"\[.+\]" if req.extras else "")
                     + re.escape(str(req.specifier))
                 )
 
                 if (
                     repl_pattern not in replacements
-                    and (target_version := installed.get(req.key)) is not None
+                    and (target_version := installed.get(req.name)) is not None
                     and req.specifier != f"=={target_version}"
                 ):
                     replacements[repl_pattern] = (
-                        req.key
+                        req.name
                         + (f"[{','.join(req.extras)}]" if req.extras else "")
                         + f"=={target_version}"
                     )
