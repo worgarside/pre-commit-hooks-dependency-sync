@@ -1,6 +1,5 @@
 """Synchronize pre-commit hooks' dependencies with Poetry's lockfile."""
 
-
 from __future__ import annotations
 
 import re
