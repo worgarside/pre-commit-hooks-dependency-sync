@@ -27,7 +27,6 @@ def get_poetry_packages(lockfile: Path) -> dict[str, str]:
 
 def get_replacements() -> dict[str, str]:
     """Get a dictionary of dependencies to replace in the pre-commit config."""
-
     installed = get_poetry_packages(POETRY_LOCKFILE)
 
     with PCH_CONFIG.open("r") as pch_config:
@@ -72,7 +71,9 @@ def main() -> None:
         updated_line = line
         for repl_pattern, value in replacements.items():
             updated_line = re.sub(
-                f"^{ADD_DEP_PREFIX}{repl_pattern}$", f"\\1{value}", updated_line
+                f"^{ADD_DEP_PREFIX}{repl_pattern}$",
+                f"\\1{value}",
+                updated_line,
             )
 
         apply_updates |= updated_line != line
