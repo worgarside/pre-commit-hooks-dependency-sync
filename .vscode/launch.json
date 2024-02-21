@@ -6,7 +6,7 @@
   "configurations": [
     {
       "name": "Python: Current File",
-      "type": "python",
+      "type": "debugpy",
       "request": "launch",
       "program": "${file}",
       "console": "integratedTerminal",
@@ -16,7 +16,7 @@
     },
     {
       "name": "Debug Tests",
-      "type": "python",
+      "type": "debugpy",
       "request": "launch",
       "purpose": [
         "debug-test"
@@ -31,7 +31,7 @@
     },
     {
       "name": "Python: Debug Test File",
-      "type": "python",
+      "type": "debugpy",
       "request": "launch",
       "module": "pytest",
       "purpose": [
@@ -48,7 +48,7 @@
     },
     {
       "name": "Python: Debug Current File",
-      "type": "python",
+      "type": "debugpy",
       "request": "launch",
       "program": "${file}",
       "console": "integratedTerminal",
