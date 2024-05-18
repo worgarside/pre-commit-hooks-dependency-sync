@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-from packaging.requirements import Requirement
+from packaging.requirements import InvalidRequirement, Requirement
 from tomli import load
 from yaml import safe_load
 
@@ -37,7 +37,13 @@ def get_replacements() -> dict[str, str]:
     for repo in config["repos"]:
         for hook in repo.get("hooks", []):
             for req_str in hook.get("additional_dependencies", []):
-                req = Requirement(req_str)
+                try:
+                    req = Requirement(req_str)
+                except InvalidRequirement:
+                    if req_str.startswith("git+"):
+                        # Skip git dependencies
+                        continue
+                    raise
 
                 repl_pattern = (
                     re.escape(req.name)
