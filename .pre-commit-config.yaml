@@ -71,7 +71,7 @@ repos:
           - --strict
           - --show-error-codes
         additional_dependencies:
-          - packaging==24.0
+          - packaging==24.1
           - tomli==2.0.1
           - types-PyYAML
 
