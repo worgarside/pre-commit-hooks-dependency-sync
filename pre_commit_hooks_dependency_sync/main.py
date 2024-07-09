@@ -22,7 +22,7 @@ def get_poetry_packages(lockfile: Path) -> dict[str, str]:
     with lockfile.open("rb") as poetry_lockfile:
         packages = load(poetry_lockfile).get("package", [])
 
-    return {package["name"]: package["version"] for package in packages}
+    return {package["name"].casefold(): package["version"] for package in packages}
 
 
 def get_replacements() -> dict[str, str]:
@@ -53,7 +53,7 @@ def get_replacements() -> dict[str, str]:
 
                 if (
                     repl_pattern not in replacements
-                    and (target_version := installed.get(req.name)) is not None
+                    and (target_version := installed.get(req.name.casefold())) is not None
                     and req.specifier != f"=={target_version}"
                 ):
                     replacements[repl_pattern] = (
@@ -82,6 +82,7 @@ def main() -> None:
                 f"^{ADD_DEP_PREFIX}{repl_pattern}$",
                 f"\\1{value}",
                 updated_line,
+                flags=re.IGNORECASE,
             )
 
         apply_updates |= updated_line != line
