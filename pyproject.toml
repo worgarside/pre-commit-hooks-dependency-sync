@@ -14,7 +14,7 @@ readme = "README.md"
 sync-dependencies = "pre_commit_hooks_dependency_sync.main:main"
 
 [tool.poetry.dependencies]
-python = "~3.11"
+python = ">=3.11,<3.13"
 tomli = "^2.0.1"
 packaging = "^24.1"
 ruamel-yaml = "^0.18.6"
