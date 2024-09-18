@@ -5,6 +5,8 @@ repos:
     hooks:
       - id: sync-additional-dependencies
         additional_dependencies:
+          - poetry
+          - packaging==24.1
           - ruamel-yaml==0.18.6
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
