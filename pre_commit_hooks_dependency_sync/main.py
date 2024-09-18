@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from argparse import ArgumentParser
 from pathlib import Path
 
 from packaging.requirements import InvalidRequirement, Requirement
@@ -16,9 +17,6 @@ YAML_LOADER.width = 4096
 
 REPO_PATH = Path().cwd()
 
-POETRY_LOCKFILE = REPO_PATH / "poetry.lock"
-PCH_CONFIG = REPO_PATH / ".pre-commit-config.yaml"
-
 ADD_DEP_PREFIX = r"(\s+-\s)"
 
 
@@ -32,13 +30,48 @@ def get_poetry_packages(lockfile: Path) -> dict[str, str]:
 
 def main() -> None:
     """Update the pre-commit config with the latest versions of dependencies."""
-    installed = get_poetry_packages(POETRY_LOCKFILE)
+    parser = ArgumentParser()
+    parser.add_argument(
+        "-c",
+        "--pch-config-path",
+        type=Path,
+        required=False,
+        help="Path to .pre-commit-config.yaml",
+        default=REPO_PATH / ".pre-commit-config.yaml",
+    )
+    parser.add_argument(
+        "-l",
+        "--lockfile-path",
+        type=Path,
+        required=False,
+        help="Path to poetry.lock",
+        default=REPO_PATH / "poetry.lock",
+    )
+    parser.add_argument(
+        "-n",
+        "--hook-name",
+        type=str,
+        required=False,
+        help="Optional hook name to limit dependency updates to",
+        default=None,
+    )
 
-    with PCH_CONFIG.open("r") as pch_config:
-        config = YAML_LOADER.load(pch_config)
+    args, _ = parser.parse_known_args()
+
+    lockfile: Path = args.lockfile_path
+    pch_config: Path = args.pch_config_path
+    hook_name: str | None = args.hook_name
+
+    installed = get_poetry_packages(lockfile)
+
+    with pch_config.open("r") as fin:
+        config = YAML_LOADER.load(fin)
 
     for repo in config["repos"]:
         for hook in repo.get("hooks", []):
+            if hook_name and hook.get("name") != hook_name:
+                continue
+
             for i, req_str in enumerate(hook.get("additional_dependencies", [])):
                 try:
                     req = Requirement(req_str)
@@ -57,7 +90,8 @@ def main() -> None:
                         + f"=={target_version}"
                     )
 
-    YAML_LOADER.dump(config, PCH_CONFIG)
+    with pch_config.open("w") as fout:
+        YAML_LOADER.dump(config, fout)
 
 
 if __name__ == "__main__":

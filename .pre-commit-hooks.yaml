@@ -2,13 +2,15 @@
   - id: sync-additional-dependencies
     name: Sync PCH Additional Dependencies
     description: Synchronize additional dependencies with poetry.lock
-    entry: poetry run sync-dependencies
+    entry: sync-dependencies
     language: python
+    language_version: python3.11
     args: []
     additional_dependencies:
       - poetry
-      - packaging
-      - ruamel-yaml
+      - packaging==24.1
+      - ruamel-yaml==0.18.6
+      - tomli==2.0.1
     always_run: true
     require_serial: true
     pass_filenames: false
