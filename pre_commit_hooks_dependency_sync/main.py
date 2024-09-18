@@ -2,13 +2,18 @@
 
 from __future__ import annotations
 
-import re
 from argparse import ArgumentParser
 from pathlib import Path
 
 from packaging.requirements import InvalidRequirement, Requirement
+from ruamel.yaml import YAML
 from tomli import load
-from yaml import safe_load
+
+YAML_LOADER = YAML(typ="rt")
+YAML_LOADER.explicit_start = True
+YAML_LOADER.preserve_quotes = True
+YAML_LOADER.indent(mapping=2, sequence=4, offset=2)
+YAML_LOADER.width = 4096
 
 REPO_PATH = Path().cwd()
 
@@ -21,46 +26,6 @@ def get_poetry_packages(lockfile: Path) -> dict[str, str]:
         packages = load(poetry_lockfile).get("package", [])
 
     return {package["name"].casefold(): package["version"] for package in packages}
-
-
-def get_replacements(lockfile: Path, pch_config: Path) -> dict[str, str]:
-    """Get a dictionary of dependencies to replace in the pre-commit config."""
-    installed = get_poetry_packages(lockfile)
-
-    with pch_config.open("r") as fin:
-        config = safe_load(fin)
-
-    replacements = {}
-
-    for repo in config["repos"]:
-        for hook in repo.get("hooks", []):
-            for req_str in hook.get("additional_dependencies", []):
-                try:
-                    req = Requirement(req_str)
-                except InvalidRequirement:
-                    if req_str.startswith("git+"):
-                        # Skip git dependencies
-                        continue
-                    raise
-
-                repl_pattern = (
-                    re.escape(req.name)
-                    + (r"\[.+\]" if req.extras else "")
-                    + re.escape(str(req.specifier))
-                )
-
-                if (
-                    repl_pattern not in replacements
-                    and (target_version := installed.get(req.name.casefold())) is not None
-                    and req.specifier != f"=={target_version}"
-                ):
-                    replacements[repl_pattern] = (
-                        req.name
-                        + (f"[{','.join(req.extras)}]" if req.extras else "")
-                        + f"=={target_version}"
-                    )
-
-    return replacements
 
 
 def main() -> None:
@@ -88,30 +53,33 @@ def main() -> None:
     lockfile: Path = args.lockfile_path
     pch_config: Path = args.pch_config_path
 
-    with pch_config.open("r") as f:
-        lines = f.readlines()
+    installed = get_poetry_packages(lockfile)
 
-    updated_lines = []
-    apply_updates = False
+    with pch_config.open("r") as fin:
+        config = YAML_LOADER.load(fin)
 
-    replacements = get_replacements(lockfile, pch_config)
+    for repo in config["repos"]:
+        for hook in repo.get("hooks", []):
+            for i, req_str in enumerate(hook.get("additional_dependencies", [])):
+                try:
+                    req = Requirement(req_str)
+                except InvalidRequirement:
+                    if req_str.startswith("git+"):
+                        # Skip git dependencies
+                        continue
+                    raise
 
-    for line in lines:
-        updated_line = line
-        for repl_pattern, value in replacements.items():
-            updated_line = re.sub(
-                f"^{ADD_DEP_PREFIX}{repl_pattern}$",
-                f"\\1{value}",
-                updated_line,
-                flags=re.IGNORECASE,
-            )
+                if (
+                    target_version := installed.get(req.name.casefold())
+                ) is not None and req.specifier != f"=={target_version}":
+                    hook["additional_dependencies"][i] = (
+                        req.name
+                        + (f"[{','.join(req.extras)}]" if req.extras else "")
+                        + f"=={target_version}"
+                    )
 
-        apply_updates |= updated_line != line
-        updated_lines.append(updated_line)
-
-    if apply_updates:
-        with pch_config.open("w") as f:
-            f.writelines(updated_lines)
+    with pch_config.open("w") as fout:
+        YAML_LOADER.dump(config, fout)
 
 
 if __name__ == "__main__":

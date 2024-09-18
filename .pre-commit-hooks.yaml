@@ -8,7 +8,7 @@
     args: []
     additional_dependencies:
       - packaging
-      - pyyaml
+      - ruamel-yaml
       - tomli
     always_run: true
     require_serial: true
