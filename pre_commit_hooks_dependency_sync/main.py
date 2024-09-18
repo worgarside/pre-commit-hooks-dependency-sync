@@ -47,11 +47,20 @@ def main() -> None:
         help="Path to poetry.lock",
         default=REPO_PATH / "poetry.lock",
     )
+    parser.add_argument(
+        "-n",
+        "--hook-name",
+        type=str,
+        required=False,
+        help="Optional hook name to limit dependency updates to",
+        default=None,
+    )
 
     args, _ = parser.parse_known_args()
 
     lockfile: Path = args.lockfile_path
     pch_config: Path = args.pch_config_path
+    hook_name: str | None = args.hook_name
 
     installed = get_poetry_packages(lockfile)
 
@@ -60,6 +69,9 @@ def main() -> None:
 
     for repo in config["repos"]:
         for hook in repo.get("hooks", []):
+            if hook_name and hook.get("name") != hook_name:
+                continue
+
             for i, req_str in enumerate(hook.get("additional_dependencies", [])):
                 try:
                     req = Requirement(req_str)
