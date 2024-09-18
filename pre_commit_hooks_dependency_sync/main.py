@@ -2,12 +2,17 @@
 
 from __future__ import annotations
 
-import re
 from pathlib import Path
 
 from packaging.requirements import InvalidRequirement, Requirement
+from ruamel.yaml import YAML
 from tomli import load
-from yaml import safe_load
+
+YAML_LOADER = YAML(typ="rt")
+YAML_LOADER.explicit_start = True
+YAML_LOADER.preserve_quotes = True
+YAML_LOADER.indent(mapping=2, sequence=4, offset=2)
+YAML_LOADER.width = 4096
 
 REPO_PATH = Path().cwd()
 
@@ -25,18 +30,16 @@ def get_poetry_packages(lockfile: Path) -> dict[str, str]:
     return {package["name"].casefold(): package["version"] for package in packages}
 
 
-def get_replacements() -> dict[str, str]:
-    """Get a dictionary of dependencies to replace in the pre-commit config."""
+def main() -> None:
+    """Update the pre-commit config with the latest versions of dependencies."""
     installed = get_poetry_packages(POETRY_LOCKFILE)
 
     with PCH_CONFIG.open("r") as pch_config:
-        config = safe_load(pch_config)
-
-    replacements = {}
+        config = YAML_LOADER.load(pch_config)
 
     for repo in config["repos"]:
         for hook in repo.get("hooks", []):
-            for req_str in hook.get("additional_dependencies", []):
+            for i, req_str in enumerate(hook.get("additional_dependencies", [])):
                 try:
                     req = Requirement(req_str)
                 except InvalidRequirement:
@@ -45,52 +48,16 @@ def get_replacements() -> dict[str, str]:
                         continue
                     raise
 
-                repl_pattern = (
-                    re.escape(req.name)
-                    + (r"\[.+\]" if req.extras else "")
-                    + re.escape(str(req.specifier))
-                )
-
                 if (
-                    repl_pattern not in replacements
-                    and (target_version := installed.get(req.name.casefold())) is not None
-                    and req.specifier != f"=={target_version}"
-                ):
-                    replacements[repl_pattern] = (
+                    target_version := installed.get(req.name.casefold())
+                ) is not None and req.specifier != f"=={target_version}":
+                    hook["additional_dependencies"][i] = (
                         req.name
                         + (f"[{','.join(req.extras)}]" if req.extras else "")
                         + f"=={target_version}"
                     )
 
-    return replacements
-
-
-def main() -> None:
-    """Update the pre-commit config with the latest versions of dependencies."""
-    with PCH_CONFIG.open("r") as f:
-        lines = f.readlines()
-
-    updated_lines = []
-    apply_updates = False
-
-    replacements = get_replacements()
-
-    for line in lines:
-        updated_line = line
-        for repl_pattern, value in replacements.items():
-            updated_line = re.sub(
-                f"^{ADD_DEP_PREFIX}{repl_pattern}$",
-                f"\\1{value}",
-                updated_line,
-                flags=re.IGNORECASE,
-            )
-
-        apply_updates |= updated_line != line
-        updated_lines.append(updated_line)
-
-    if apply_updates:
-        with PCH_CONFIG.open("w") as f:
-            f.writelines(updated_lines)
+    YAML_LOADER.dump(config, PCH_CONFIG)
 
 
 if __name__ == "__main__":
