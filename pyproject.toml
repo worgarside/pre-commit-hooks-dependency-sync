@@ -1,10 +1,10 @@
 [project]
 name = "pre-commit-hooks-dependency-sync"
-version = "1.0.1"
+version = "1.2.0"
 
 [tool.poetry]
 name = "pre-commit-hooks-dependency-sync"
-version = "1.1.2"
+version = "1.2.0"
 description = "Pre-commit hook to sync your additional dependencies with your project's environment"
 authors = ["Will Garside <worgarside@gmail.com>"]
 license = "MIT"
