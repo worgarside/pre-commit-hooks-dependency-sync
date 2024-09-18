@@ -8,7 +8,7 @@
     additional_dependencies:
       - poetry
       - packaging
-      - pyyaml
+      - ruamel-yaml
     always_run: true
     require_serial: true
     pass_filenames: false
