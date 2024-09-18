@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+from argparse import ArgumentParser
 from pathlib import Path
 
 from packaging.requirements import InvalidRequirement, Requirement
@@ -10,9 +11,6 @@ from tomli import load
 from yaml import safe_load
 
 REPO_PATH = Path().cwd()
-
-POETRY_LOCKFILE = REPO_PATH / "poetry.lock"
-PCH_CONFIG = REPO_PATH / ".pre-commit-config.yaml"
 
 ADD_DEP_PREFIX = r"(\s+-\s)"
 
@@ -25,12 +23,12 @@ def get_poetry_packages(lockfile: Path) -> dict[str, str]:
     return {package["name"].casefold(): package["version"] for package in packages}
 
 
-def get_replacements() -> dict[str, str]:
+def get_replacements(lockfile: Path, pch_config: Path) -> dict[str, str]:
     """Get a dictionary of dependencies to replace in the pre-commit config."""
-    installed = get_poetry_packages(POETRY_LOCKFILE)
+    installed = get_poetry_packages(lockfile)
 
-    with PCH_CONFIG.open("r") as pch_config:
-        config = safe_load(pch_config)
+    with pch_config.open("r") as fin:
+        config = safe_load(fin)
 
     replacements = {}
 
@@ -67,13 +65,36 @@ def get_replacements() -> dict[str, str]:
 
 def main() -> None:
     """Update the pre-commit config with the latest versions of dependencies."""
-    with PCH_CONFIG.open("r") as f:
+    parser = ArgumentParser()
+    parser.add_argument(
+        "-c",
+        "--pch-config-path",
+        type=Path,
+        required=False,
+        help="Path to .pre-commit-config.yaml",
+        default=REPO_PATH / ".pre-commit-config.yaml",
+    )
+    parser.add_argument(
+        "-l",
+        "--lockfile-path",
+        type=Path,
+        required=False,
+        help="Path to poetry.lock",
+        default=REPO_PATH / "poetry.lock",
+    )
+
+    args, _ = parser.parse_known_args()
+
+    lockfile: Path = args.lockfile_path
+    pch_config: Path = args.pch_config_path
+
+    with pch_config.open("r") as f:
         lines = f.readlines()
 
     updated_lines = []
     apply_updates = False
 
-    replacements = get_replacements()
+    replacements = get_replacements(lockfile, pch_config)
 
     for line in lines:
         updated_line = line
@@ -89,7 +110,7 @@ def main() -> None:
         updated_lines.append(updated_line)
 
     if apply_updates:
-        with PCH_CONFIG.open("w") as f:
+        with pch_config.open("w") as f:
             f.writelines(updated_lines)
 
 
