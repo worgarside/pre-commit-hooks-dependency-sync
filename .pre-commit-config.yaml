@@ -1,7 +1,7 @@
 ---
 repos:
   - repo: https://github.com/worgarside/pre-commit-hooks-dependency-sync
-    rev: 1.1.2
+    rev: 1.2.0
     hooks:
       - id: sync-additional-dependencies
         additional_dependencies:
@@ -11,13 +11,13 @@ repos:
           - tomli==2.0.1
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.6.5
+    rev: v0.6.9
     hooks:
       - id: ruff
       - id: ruff-format
 
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.6.0
+    rev: v5.0.0
     hooks:
       - id: check-added-large-files
         args:
@@ -95,6 +95,6 @@ repos:
           - tomli==2.0.1
 
   - repo: https://github.com/jendrikseipp/vulture
-    rev: v2.11
+    rev: v2.13
     hooks:
       - id: vulture
