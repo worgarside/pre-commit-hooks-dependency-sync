@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from argparse import ArgumentParser
 from pathlib import Path
 
@@ -15,9 +16,10 @@ YAML_LOADER.preserve_quotes = True
 YAML_LOADER.indent(mapping=2, sequence=4, offset=2)
 YAML_LOADER.width = 4096
 
-REPO_PATH = Path().cwd()
+EQUIV_CHARS = re.compile(r"[-_.]")
+"""Characters that are considered equivalent within package names."""
 
-ADD_DEP_PREFIX = r"(\s+-\s)"
+REPO_PATH = Path().cwd()
 
 
 def get_poetry_packages(lockfile: Path) -> dict[str, str]:
@@ -25,7 +27,7 @@ def get_poetry_packages(lockfile: Path) -> dict[str, str]:
     with lockfile.open("rb") as poetry_lockfile:
         packages = load(poetry_lockfile).get("package", [])
 
-    return {package["name"].casefold(): package["version"] for package in packages}
+    return {package["name"]: package["version"] for package in packages}
 
 
 def main() -> None:
@@ -81,12 +83,23 @@ def main() -> None:
                         continue
                     raise
 
-                if (
-                    target_version := installed.get(req.name.casefold())
-                ) is not None and req.specifier != f"=={target_version}":
+                for installed_req in installed:
+                    if EQUIV_CHARS.sub(
+                        " ",
+                        installed_req.casefold(),
+                    ) == EQUIV_CHARS.sub(
+                        " ",
+                        req.name.casefold(),
+                    ):
+                        target_version = installed[installed_req]
+                        break
+                else:
+                    continue
+
+                if req.specifier != f"=={target_version}":
                     hook["additional_dependencies"][i] = (
-                        req.name
-                        + (f"[{','.join(req.extras)}]" if req.extras else "")
+                        installed_req
+                        + (f"[{','.join(sorted(req.extras))}]" if req.extras else "")
                         + f"=={target_version}"
                     )
 
