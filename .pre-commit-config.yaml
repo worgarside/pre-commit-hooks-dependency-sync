@@ -1,7 +1,7 @@
 ---
 repos:
   - repo: https://github.com/worgarside/pre-commit-hooks-dependency-sync
-    rev: 1.2.0
+    rev: 1.2.1
     hooks:
       - id: sync-additional-dependencies
         additional_dependencies:
