@@ -1,7 +1,7 @@
 ---
 repos:
   - repo: https://github.com/worgarside/pre-commit-hooks-dependency-sync
-    rev: 1.2.0
+    rev: 1.2.1
     hooks:
       - id: sync-additional-dependencies
         additional_dependencies:
@@ -11,7 +11,7 @@ repos:
           - tomli==2.1.0
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.6.9
+    rev: v0.11.13
     hooks:
       - id: ruff
       - id: ruff-format
@@ -53,7 +53,7 @@ repos:
           - '4096'
 
   - repo: https://github.com/adrienverge/yamllint.git
-    rev: v1.35.1
+    rev: v1.37.1
     hooks:
       - id: yamllint
         args:
@@ -62,14 +62,14 @@ repos:
           - --strict
 
   - repo: https://github.com/hadialqattan/pycln
-    rev: v2.4.0
+    rev: v2.5.0
     hooks:
       - id: pycln
         args:
           - --all
 
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.11.2
+    rev: v1.16.0
     hooks:
       - id: mypy
         args:
@@ -88,13 +88,13 @@ repos:
       - id: python-check-mock-methods
 
   - repo: https://github.com/codespell-project/codespell
-    rev: v2.3.0
+    rev: v2.4.1
     hooks:
       - id: codespell
         additional_dependencies:
           - tomli==2.1.0
 
   - repo: https://github.com/jendrikseipp/vulture
-    rev: v2.13
+    rev: v2.14
     hooks:
       - id: vulture
