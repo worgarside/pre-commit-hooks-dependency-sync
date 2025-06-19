@@ -17,7 +17,12 @@ YAML_LOADER.indent(mapping=2, sequence=4, offset=2)
 YAML_LOADER.width = 4096
 
 EQUIV_CHARS = re.compile(r"[-_.]")
-"""Characters that are considered equivalent within package names."""
+"""Characters that are considered equivalent within package names.
+
+Example:
+    case 1: "package-name" == "package_name"
+    case 2: "real-package_name" == "real_package_name"
+"""
 
 REPO_PATH = Path().cwd()
 
@@ -25,9 +30,33 @@ REPO_PATH = Path().cwd()
 def get_poetry_packages(lockfile: Path) -> dict[str, str]:
     """Get a dictionary of dependencies from the Poetry lockfile."""
     with lockfile.open("rb") as poetry_lockfile:
+        # converts toml to dicts
         packages = load(poetry_lockfile).get("package", [])
 
     return {package["name"]: package["version"] for package in packages}
+
+
+def get_uv_packages(lockfile: Path) -> dict[str, str]:
+    """Get a dictionary of dependencies from the uv lockfile."""
+    with lockfile.open("rb") as uv_lockfile:
+        # converts toml to dicts
+        packages = load(uv_lockfile).get("package", [])
+
+    return {
+        package["name"]: package["version"]
+        for package in packages
+        # there are cases in which the package does not have a version
+        if "version" in package and "name" in package
+    }
+
+
+def get_installed_packages(lockfile: Path, package_manager: str) -> dict[str, str]:
+    """Get a dictionary of dependencies from the lockfile."""
+    if package_manager == "poetry":
+        return get_poetry_packages(lockfile)
+    if package_manager == "uv":
+        return get_uv_packages(lockfile)
+    raise NotImplementedError(f"Package manager {package_manager} not implemented")
 
 
 def main() -> None:
@@ -42,14 +71,6 @@ def main() -> None:
         default=REPO_PATH / ".pre-commit-config.yaml",
     )
     parser.add_argument(
-        "-l",
-        "--lockfile-path",
-        type=Path,
-        required=False,
-        help="Path to poetry.lock",
-        default=REPO_PATH / "poetry.lock",
-    )
-    parser.add_argument(
         "-n",
         "--hook-name",
         type=str,
@@ -57,14 +78,32 @@ def main() -> None:
         help="Optional hook name to limit dependency updates to",
         default=None,
     )
+    parser.add_argument(
+        "-p",
+        "--package-manager",
+        type=str,
+        required=True,
+        help="Package manager to use for dependency management",
+        default="poetry",
+        choices=["poetry", "uv"],
+    )
+    parser.add_argument(
+        "-l",
+        "--lockfile-path",
+        type=Path,
+        required=False,
+        help="Path to lockfile",
+        default=REPO_PATH / "poetry.lock",
+    )
 
     args, _ = parser.parse_known_args()
 
-    lockfile: Path = args.lockfile_path
     pch_config: Path = args.pch_config_path
     hook_name: str | None = args.hook_name
+    lockfile: Path = args.lockfile_path
+    package_manager: str = args.package_manager
 
-    installed = get_poetry_packages(lockfile)
+    installed = get_installed_packages(lockfile, package_manager)
 
     with pch_config.open("r") as fin:
         config = YAML_LOADER.load(fin)
