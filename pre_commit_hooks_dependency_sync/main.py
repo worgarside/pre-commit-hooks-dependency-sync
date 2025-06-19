@@ -54,9 +54,11 @@ def get_installed_packages(lockfile: Path, package_manager: str) -> dict[str, st
     """Get a dictionary of dependencies from the lockfile."""
     if package_manager == "poetry":
         return get_poetry_packages(lockfile)
+
     if package_manager == "uv":
         return get_uv_packages(lockfile)
-    raise NotImplementedError(f"Package manager {package_manager} not implemented")
+
+    raise NotImplementedError(f"Package manager {package_manager!r} not implemented")
 
 
 def main() -> None:
@@ -82,26 +84,34 @@ def main() -> None:
         "-p",
         "--package-manager",
         type=str,
-        required=True,
+        required=False,
         help="Package manager to use for dependency management",
         default="poetry",
         choices=["poetry", "uv"],
     )
+
+    # avoids having a manager-specific default path
+    default_path = "<repo path>/<package manager>.lock"
+
     parser.add_argument(
         "-l",
         "--lockfile-path",
         type=Path,
         required=False,
         help="Path to lockfile",
-        default=REPO_PATH / "poetry.lock",
+        default=default_path,
     )
 
     args, _ = parser.parse_known_args()
 
     pch_config: Path = args.pch_config_path
     hook_name: str | None = args.hook_name
-    lockfile: Path = args.lockfile_path
     package_manager: str = args.package_manager
+
+    if str(args.lockfile_path) == default_path:
+        lockfile: Path = REPO_PATH / f"{package_manager}.lock"
+    else:
+        lockfile = args.lockfile_path
 
     installed = get_installed_packages(lockfile, package_manager)
 
