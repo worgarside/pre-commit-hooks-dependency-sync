@@ -61,7 +61,7 @@ def get_installed_packages(lockfile: Path, package_manager: str) -> dict[str, st
     raise NotImplementedError(f"Package manager {package_manager!r} not implemented")
 
 
-def main() -> None:
+def main() -> None:  # noqa: PLR0912
     """Update the pre-commit config with the latest versions of dependencies."""
     parser = ArgumentParser()
     parser.add_argument(
