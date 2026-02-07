@@ -101,12 +101,27 @@ def main() -> None:
         help="Path to lockfile",
         default=default_path,
     )
+    parser.add_argument(
+        "-e",
+        "--exclude-packages",
+        type=str,
+        nargs="+",
+        required=False,
+        help="Package names to exclude from synchronization",
+        default=[],
+    )
 
     args, _ = parser.parse_known_args()
 
     pch_config: Path = args.pch_config_path
     hook_name: str | None = args.hook_name
     package_manager: str = args.package_manager
+    exclude_packages: list[str] = args.exclude_packages
+
+    # Normalize excluded package names for comparison
+    normalized_excludes = {
+        EQUIV_CHARS.sub(" ", pkg.casefold()) for pkg in exclude_packages
+    }
 
     if str(args.lockfile_path) == default_path:
         lockfile: Path = REPO_PATH / f"{package_manager}.lock"
@@ -132,13 +147,18 @@ def main() -> None:
                         continue
                     raise
 
+                # Skip excluded packages
+                normalized_req_name = EQUIV_CHARS.sub(" ", req.name.casefold())
+                if normalized_req_name in normalized_excludes:
+                    continue
+
                 for installed_req in installed:
-                    if EQUIV_CHARS.sub(
-                        " ",
-                        installed_req.casefold(),
-                    ) == EQUIV_CHARS.sub(
-                        " ",
-                        req.name.casefold(),
+                    if (
+                        EQUIV_CHARS.sub(
+                            " ",
+                            installed_req.casefold(),
+                        )
+                        == normalized_req_name
                     ):
                         target_version = installed[installed_req]
                         break
