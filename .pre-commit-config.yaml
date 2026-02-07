@@ -6,7 +6,7 @@ repos:
       - id: sync-additional-dependencies
         additional_dependencies:
           - poetry
-          - packaging==25.0
+          - packaging==26.0
           - ruamel-yaml==0.18.14
           - tomli==2.4.0
 
@@ -76,7 +76,7 @@ repos:
           - --strict
           - --show-error-codes
         additional_dependencies:
-          - packaging==25.0
+          - packaging==26.0
           - tomli==2.4.0
           - ruamel-yaml==0.18.14
 
