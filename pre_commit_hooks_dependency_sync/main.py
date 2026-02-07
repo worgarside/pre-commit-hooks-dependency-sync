@@ -1,10 +1,11 @@
-"""Synchronize pre-commit hooks' dependencies with Poetry's lockfile."""
+"""Synchronize pre-commit hooks' dependencies with a lockfile."""
 
 from __future__ import annotations
 
 import re
 from argparse import ArgumentParser
 from pathlib import Path
+from urllib.parse import parse_qs, urlencode, urlsplit, urlunsplit
 
 from packaging.requirements import InvalidRequirement, Requirement
 from ruamel.yaml import YAML
@@ -50,6 +51,57 @@ def get_uv_packages(lockfile: Path) -> dict[str, str]:
     }
 
 
+def get_poetry_git_sources(lockfile: Path) -> dict[str, str]:
+    """Get git dependency sources from the Poetry lockfile."""
+    with lockfile.open("rb") as poetry_lockfile:
+        packages = load(poetry_lockfile).get("package", [])
+
+    git_sources: dict[str, str] = {}
+    for package in packages:
+        source = package.get("source", {})
+        if source.get("type") != "git":
+            continue
+
+        url = source.get("url")
+        reference = source.get("resolved_reference") or source.get("reference")
+        if not url:
+            continue
+
+        git_sources[package["name"]] = (
+            f"git+{url}@{reference}" if reference else f"git+{url}"
+        )
+
+    return git_sources
+
+
+def get_uv_git_sources(lockfile: Path) -> dict[str, str]:
+    """Get git dependency sources from the uv lockfile."""
+    with lockfile.open("rb") as uv_lockfile:
+        packages = load(uv_lockfile).get("package", [])
+
+    git_sources: dict[str, str] = {}
+    for package in packages:
+        source = package.get("source", {})
+        git_url = source.get("git")
+        if not git_url:
+            continue
+
+        parsed = urlsplit(git_url)
+        ref = parsed.fragment or parse_qs(parsed.query).get("rev", [None])[0]
+        query = parse_qs(parsed.query)
+        query.pop("rev", None)
+        query_string = urlencode(query, doseq=True) if query else ""
+        base_url = urlunsplit(
+            (parsed.scheme, parsed.netloc, parsed.path, query_string, ""),
+        )
+
+        git_sources[package["name"]] = (
+            f"git+{base_url}@{ref}" if ref else f"git+{base_url}"
+        )
+
+    return git_sources
+
+
 def get_installed_packages(lockfile: Path, package_manager: str) -> dict[str, str]:
     """Get a dictionary of dependencies from the lockfile."""
     if package_manager == "poetry":
@@ -59,6 +111,27 @@ def get_installed_packages(lockfile: Path, package_manager: str) -> dict[str, st
         return get_uv_packages(lockfile)
 
     raise NotImplementedError(f"Package manager {package_manager!r} not implemented")
+
+
+def get_git_sources(lockfile: Path, package_manager: str) -> dict[str, str]:
+    """Get git dependency sources from the lockfile."""
+    if package_manager == "poetry":
+        return get_poetry_git_sources(lockfile)
+
+    if package_manager == "uv":
+        return get_uv_git_sources(lockfile)
+
+    raise NotImplementedError(f"Package manager {package_manager!r} not implemented")
+
+
+def find_dependency_key(name: str, available: dict[str, str]) -> str | None:
+    """Find matching key in a dependency map using normalized names."""
+    normalized_name = EQUIV_CHARS.sub(" ", name.casefold())
+    for candidate in available:
+        if EQUIV_CHARS.sub(" ", candidate.casefold()) == normalized_name:
+            return candidate
+
+    return None
 
 
 def main() -> None:  # noqa: PLR0912
@@ -129,8 +202,9 @@ def main() -> None:  # noqa: PLR0912
         lockfile = args.lockfile_path
 
     installed = get_installed_packages(lockfile, package_manager)
+    git_sources = get_git_sources(lockfile, package_manager)
 
-    with pch_config.open("r") as fin:
+    with pch_config.open("r", encoding="utf-8") as fin:
         config = YAML_LOADER.load(fin)
 
     for repo in config["repos"]:
@@ -152,27 +226,34 @@ def main() -> None:  # noqa: PLR0912
                 if normalized_req_name in normalized_excludes:
                     continue
 
-                for installed_req in installed:
-                    if (
-                        EQUIV_CHARS.sub(
-                            " ",
-                            installed_req.casefold(),
-                        )
-                        == normalized_req_name
-                    ):
-                        target_version = installed[installed_req]
-                        break
-                else:
+                if req.url:
+                    matched_git = find_dependency_key(req.name, git_sources)
+                    if not matched_git:
+                        continue
+
+                    target_url = git_sources[matched_git]
+                    expected = (
+                        matched_git
+                        + (f"[{','.join(sorted(req.extras))}]" if req.extras else "")
+                        + f" @ {target_url}"
+                    )
+                    if req_str != expected:
+                        hook["additional_dependencies"][i] = expected
                     continue
 
+                matched_installed = find_dependency_key(req.name, installed)
+                if not matched_installed:
+                    continue
+
+                target_version = installed[matched_installed]
                 if req.specifier != f"=={target_version}":
                     hook["additional_dependencies"][i] = (
-                        installed_req
+                        matched_installed
                         + (f"[{','.join(sorted(req.extras))}]" if req.extras else "")
                         + f"=={target_version}"
                     )
 
-    with pch_config.open("w") as fout:
+    with pch_config.open("w", encoding="utf-8") as fout:
         YAML_LOADER.dump(config, fout)
 
 

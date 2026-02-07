@@ -1,7 +1,7 @@
 ---
   - id: sync-additional-dependencies
     name: Sync PCH Additional Dependencies
-    description: Synchronize additional dependencies with poetry.lock
+    description: Synchronize additional dependencies with a lockfile
     entry: sync-dependencies
     language: python
     language_version: python3.11
