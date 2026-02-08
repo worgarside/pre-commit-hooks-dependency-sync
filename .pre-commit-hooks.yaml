@@ -7,10 +7,9 @@
     language_version: python3.13
     args: []
     additional_dependencies:
-      - poetry
-      - packaging==24.1
-      - ruamel-yaml==0.18.6
-      - tomli==2.0.1
+      - packaging==26.0
+      - ruamel-yaml==0.19.1
+      - tomli==2.4.0
     always_run: true
     require_serial: true
     pass_filenames: false
