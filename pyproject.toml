@@ -18,6 +18,7 @@ python = ">=3.11,<3.14"
 tomli = "^2.4.0"
 packaging = "^26.0"
 ruamel-yaml = "^0.19.1"
+tomlkit = "^0.15.1"
 
 [build-system]
 requires = ["setuptools", "setuptools-scm"]

@@ -5,11 +5,14 @@ from __future__ import annotations
 import re
 from argparse import ArgumentParser
 from pathlib import Path
+from typing import Any
 from urllib.parse import parse_qs, urlencode, urlsplit, urlunsplit
 
 from packaging.requirements import InvalidRequirement, Requirement
 from ruamel.yaml import YAML
 from tomli import load
+from tomlkit import dump as dump_toml
+from tomlkit import load as load_toml
 
 YAML_LOADER = YAML(typ="rt")
 YAML_LOADER.explicit_start = True
@@ -26,6 +29,24 @@ Example:
 """
 
 REPO_PATH = Path().cwd()
+CONFIG_FILENAMES = ("prek.toml", ".pre-commit-config.yaml", ".pre-commit-config.yml")
+
+
+class HookConfigNotFoundError(FileNotFoundError):
+    """Raised when config discovery cannot find a supported file."""
+
+    def __init__(self, filenames: tuple[str, ...]) -> None:
+        """Initialize the error with the supported filenames."""
+        supported = ", ".join(filenames)
+        super().__init__(f"No hook config found; expected one of: {supported}")
+
+
+class UnsupportedHookConfigError(ValueError):
+    """Raised when a hook config has an unsupported extension."""
+
+    def __init__(self, config_path: Path) -> None:
+        """Initialize the error with the unsupported path."""
+        super().__init__(f"Unsupported hook config format: {config_path}")
 
 
 def get_poetry_packages(lockfile: Path) -> dict[str, str]:
@@ -134,16 +155,127 @@ def find_dependency_key(name: str, available: dict[str, str]) -> str | None:
     return None
 
 
-def main() -> None:  # noqa: PLR0912
+def resolve_config_path(
+    config_path: Path | None,
+    repo_path: Path | None = None,
+) -> Path:
+    """Resolve an explicit config path or discover one using prek precedence."""
+    if config_path is not None:
+        return config_path
+
+    root = repo_path or REPO_PATH
+    for filename in CONFIG_FILENAMES:
+        candidate = root / filename
+        if candidate.is_file():
+            return candidate
+
+    raise HookConfigNotFoundError(CONFIG_FILENAMES)
+
+
+def load_config(config_path: Path) -> Any:
+    """Load a supported hook config while preserving formatting metadata."""
+    if config_path.suffix == ".toml":
+        with config_path.open("r", encoding="utf-8") as config_file:
+            return load_toml(config_file)
+
+    if config_path.suffix in {".yaml", ".yml"}:
+        with config_path.open("r", encoding="utf-8") as config_file:
+            return YAML_LOADER.load(config_file)
+
+    raise UnsupportedHookConfigError(config_path)
+
+
+def dump_config(config_path: Path, config: Any) -> None:
+    """Write a hook config in the format selected by its path."""
+    if config_path.suffix == ".toml":
+        with config_path.open("w", encoding="utf-8") as config_file:
+            dump_toml(config, config_file)
+        return
+
+    if config_path.suffix in {".yaml", ".yml"}:
+        with config_path.open("w", encoding="utf-8") as config_file:
+            YAML_LOADER.dump(config, config_file)
+        return
+
+    raise UnsupportedHookConfigError(config_path)
+
+
+def sync_dependencies(
+    config: Any,
+    installed: dict[str, str],
+    git_sources: dict[str, str],
+    hook_name: str | None,
+    exclude_packages: list[str],
+) -> None:
+    """Synchronize additional dependencies in a parsed hook config."""
+    normalized_excludes = {
+        EQUIV_CHARS.sub(" ", package.casefold()) for package in exclude_packages
+    }
+
+    for repo in config["repos"]:
+        for hook in repo.get("hooks", []):
+            if hook_name and hook.get("name") != hook_name:
+                continue
+
+            for index, requirement_string in enumerate(
+                hook.get("additional_dependencies", []),
+            ):
+                try:
+                    requirement = Requirement(requirement_string)
+                except InvalidRequirement:
+                    if requirement_string.startswith("git+"):
+                        continue
+                    raise
+
+                normalized_name = EQUIV_CHARS.sub(" ", requirement.name.casefold())
+                if normalized_name in normalized_excludes:
+                    continue
+
+                if requirement.url:
+                    matched_git = find_dependency_key(requirement.name, git_sources)
+                    if not matched_git:
+                        continue
+
+                    expected = (
+                        matched_git
+                        + (
+                            f"[{','.join(sorted(requirement.extras))}]"
+                            if requirement.extras
+                            else ""
+                        )
+                        + f" @ {git_sources[matched_git]}"
+                    )
+                    if requirement_string != expected:
+                        hook["additional_dependencies"][index] = expected
+                    continue
+
+                matched_installed = find_dependency_key(requirement.name, installed)
+                if not matched_installed:
+                    continue
+
+                target_version = installed[matched_installed]
+                if requirement.specifier != f"=={target_version}":
+                    hook["additional_dependencies"][index] = (
+                        matched_installed
+                        + (
+                            f"[{','.join(sorted(requirement.extras))}]"
+                            if requirement.extras
+                            else ""
+                        )
+                        + f"=={target_version}"
+                    )
+
+
+def main() -> None:
     """Update the pre-commit config with the latest versions of dependencies."""
     parser = ArgumentParser()
     parser.add_argument(
         "-c",
-        "--pch-config-path",
+        "--config-path",
         type=Path,
         required=False,
-        help="Path to .pre-commit-config.yaml",
-        default=REPO_PATH / ".pre-commit-config.yaml",
+        help="Path to prek.toml or a pre-commit YAML config",
+        default=None,
     )
     parser.add_argument(
         "-n",
@@ -186,15 +318,10 @@ def main() -> None:  # noqa: PLR0912
 
     args, _ = parser.parse_known_args()
 
-    pch_config: Path = args.pch_config_path
+    config_path = resolve_config_path(args.config_path)
     hook_name: str | None = args.hook_name
     package_manager: str = args.package_manager
     exclude_packages: list[str] = args.exclude_packages
-
-    # Normalize excluded package names for comparison
-    normalized_excludes = {
-        EQUIV_CHARS.sub(" ", pkg.casefold()) for pkg in exclude_packages
-    }
 
     if str(args.lockfile_path) == default_path:
         lockfile: Path = REPO_PATH / f"{package_manager}.lock"
@@ -204,57 +331,15 @@ def main() -> None:  # noqa: PLR0912
     installed = get_installed_packages(lockfile, package_manager)
     git_sources = get_git_sources(lockfile, package_manager)
 
-    with pch_config.open("r", encoding="utf-8") as fin:
-        config = YAML_LOADER.load(fin)
-
-    for repo in config["repos"]:
-        for hook in repo.get("hooks", []):
-            if hook_name and hook.get("name") != hook_name:
-                continue
-
-            for i, req_str in enumerate(hook.get("additional_dependencies", [])):
-                try:
-                    req = Requirement(req_str)
-                except InvalidRequirement:
-                    if req_str.startswith("git+"):
-                        # Skip git dependencies
-                        continue
-                    raise
-
-                # Skip excluded packages
-                normalized_req_name = EQUIV_CHARS.sub(" ", req.name.casefold())
-                if normalized_req_name in normalized_excludes:
-                    continue
-
-                if req.url:
-                    matched_git = find_dependency_key(req.name, git_sources)
-                    if not matched_git:
-                        continue
-
-                    target_url = git_sources[matched_git]
-                    expected = (
-                        matched_git
-                        + (f"[{','.join(sorted(req.extras))}]" if req.extras else "")
-                        + f" @ {target_url}"
-                    )
-                    if req_str != expected:
-                        hook["additional_dependencies"][i] = expected
-                    continue
-
-                matched_installed = find_dependency_key(req.name, installed)
-                if not matched_installed:
-                    continue
-
-                target_version = installed[matched_installed]
-                if req.specifier != f"=={target_version}":
-                    hook["additional_dependencies"][i] = (
-                        matched_installed
-                        + (f"[{','.join(sorted(req.extras))}]" if req.extras else "")
-                        + f"=={target_version}"
-                    )
-
-    with pch_config.open("w", encoding="utf-8") as fout:
-        YAML_LOADER.dump(config, fout)
+    config = load_config(config_path)
+    sync_dependencies(
+        config,
+        installed,
+        git_sources,
+        hook_name,
+        exclude_packages,
+    )
+    dump_config(config_path, config)
 
 
 if __name__ == "__main__":

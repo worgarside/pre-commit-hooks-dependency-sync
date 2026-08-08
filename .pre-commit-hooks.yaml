@@ -10,6 +10,7 @@
       - packaging==26.0
       - ruamel-yaml==0.19.1
       - tomli==2.4.0
+      - tomlkit==0.15.1
     always_run: true
     require_serial: true
     pass_filenames: false
