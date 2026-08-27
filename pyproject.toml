@@ -112,3 +112,9 @@ docstring-code-line-length = "dynamic"
 min_confidence = 70
 paths = ["pre_commit_hooks_dependency_sync"]
 sort_by_size = true
+
+[tool.semantic_release]
+version_toml = [
+  "pyproject.toml:project.version",
+  "pyproject.toml:tool.poetry.version",
+]
