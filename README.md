@@ -1,10 +1,13 @@
 # Pre-Commit Hook Additional Dependencies Synchronizer
 
-This is a simple Pre-Commit Hook that will compare your `poetry.lock` or `uv.lock` file with the additional dependencies included in `.pre-commit-config.yaml`. Any additional dependencies which are found in the lockfile will be pinned to that version within the PCH config.
+This hook compares your `poetry.lock` or `uv.lock` file with the additional
+dependencies in `prek.toml`, `.pre-commit-config.yaml`, or
+`.pre-commit-config.yml`. Dependencies found in the lockfile are pinned to that
+version in the hook config.
 
 ## Usage
 
-Add this pre-commit hook to your project by adding the following to your `.pre-commit-config.yaml`:
+Add this hook to a pre-commit YAML config:
 
 ```yaml
   - repo: https://github.com/worgarside/pre-commit-hooks-dependency-sync
@@ -12,6 +15,20 @@ Add this pre-commit hook to your project by adding the following to your `.pre-c
     hooks:
       - id: sync-additional-dependencies
 ```
+
+Or add it to `prek.toml`:
+
+```toml
+[[repos]]
+repo = "https://github.com/worgarside/pre-commit-hooks-dependency-sync"
+rev = "1.0.1"
+
+[[repos.hooks]]
+id = "sync-additional-dependencies"
+```
+
+When `--config-path` is omitted, config discovery follows prek's precedence:
+`prek.toml`, `.pre-commit-config.yaml`, then `.pre-commit-config.yml`.
 
 ## Configuration Options
 
@@ -30,7 +47,7 @@ You can customize the behavior of the hook by passing arguments:
 
 ### Available Arguments
 
-- `--pch-config-path` / `-c`: Path to `.pre-commit-config.yaml` (default: `.pre-commit-config.yaml` in repo root)
+- `--config-path` / `-c`: Path to `prek.toml` or a pre-commit YAML config (default: discover using prek's precedence). The previous `--pch-config-path` name remains supported.
 - `--hook-name` / `-n`: Optional hook name to limit dependency updates to a specific hook
 - `--package-manager` / `-p`: Package manager to use (`poetry` or `uv`, default: `poetry`)
 - `--lockfile-path` / `-l`: Path to lockfile (default: `<package-manager>.lock` in repo root)
