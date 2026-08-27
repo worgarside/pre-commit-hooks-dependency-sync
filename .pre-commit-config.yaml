@@ -4,11 +4,20 @@ repos:
     rev: 1.5.1
     hooks:
       - id: sync-additional-dependencies
+        args:
+          - --package-manager
+          - uv
+          - --lockfile-path
+          - uv.lock
         additional_dependencies:
-          - poetry
-          - packaging==26.2
+          - packaging==26.3
           - ruamel-yaml==0.19.1
           - tomli==2.4.1
+
+  - repo: https://github.com/astral-sh/uv-pre-commit
+    rev: 0.12.6
+    hooks:
+      - id: uv-lock
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.16.1
@@ -76,7 +85,7 @@ repos:
           - --strict
           - --show-error-codes
         additional_dependencies:
-          - packaging==26.2
+          - packaging==26.3
           - tomli==2.4.1
           - ruamel-yaml==0.19.1
 

@@ -7,9 +7,9 @@
     language_version: python3.13
     args: []
     additional_dependencies:
-      - packaging==26.0
+      - packaging==26.3
       - ruamel-yaml==0.19.1
-      - tomli==2.4.0
+      - tomli==2.4.1
     always_run: true
     require_serial: true
     pass_filenames: false
