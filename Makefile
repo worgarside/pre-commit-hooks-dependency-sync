@@ -1,8 +1,8 @@
 install:
-	poetry install --all-extras --sync
+	uv sync --locked --all-groups
 
 try-repo:
-	git add . && cd ../home-assistant-config-validator && git add . && pre-commit try-repo ../pre-commit-hooks-dependency-sync
+	git add . && cd ../home-assistant-config-validator && git add . && uvx prek try-repo ../pre-commit-hooks-dependency-sync
 
 vscode-shortcut-1:
 	make try-repo

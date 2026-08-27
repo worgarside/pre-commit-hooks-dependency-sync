@@ -79,3 +79,13 @@ If you want to prevent certain packages from being synchronized (e.g., to mainta
           - --package-manager
           - uv
 ```
+
+## Development
+
+This project uses uv for dependency management and builds:
+
+```shell
+uv sync --locked
+uv run sync-dependencies --package-manager uv --lockfile-path uv.lock
+uv build
+```
