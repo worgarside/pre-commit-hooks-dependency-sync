@@ -1,0 +1,81 @@
+---
+name: Prek Hooks
+
+on:
+  merge_group:
+  push:
+    branches:
+      - main
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - ready_for_review
+
+concurrency:
+  group: prek-hooks-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  prek-project-branch:
+    name: Run Prek
+    if: >-
+      github.event_name != 'pull_request' ||
+      github.event.pull_request.head.repo.full_name == github.repository
+    uses: worganisation/github-config-files/.github/workflows/__prek-hooks.yml@0.6.2
+    with:
+      python-version: '3.13'
+      sync-project-dependencies: 'false'
+    secrets: inherit
+
+  prek-fork:
+    name: Run Prek (fork)
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.head.repo.full_name != github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Clone Fork PR
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+        with:
+          enable-cache: true
+          cache-local-path: ${{ github.workspace }}/.uv-cache
+          python-version: '3.13'
+
+      - name: Run Prek
+        uses: j178/prek-action@4e14d07f9231acabce116ccfca13b13dd9755ece # v3.0.0
+        with:
+          prek-version: 0.4.12
+          extra-args: --all-files
+          cache: true
+
+  prek:
+    name: Prek Hooks
+    if: always()
+    needs:
+      - prek-project-branch
+      - prek-fork
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require Successful Prek Run
+        env:
+          FORK_RESULT: ${{ needs.prek-fork.result }}
+          PROJECT_BRANCH_RESULT: ${{ needs.prek-project-branch.result }}
+        run: |
+          if [[ "$FORK_RESULT" == 'success' || "$PROJECT_BRANCH_RESULT" == 'success' ]]; then
+            exit 0
+          fi
+
+          echo "No Prek run succeeded." >&2
+          exit 1
