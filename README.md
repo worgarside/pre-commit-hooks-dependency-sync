@@ -47,7 +47,7 @@ You can customize the behavior of the hook by passing arguments:
 
 ### Available Arguments
 
-- `--config-path` / `-c`: Path to `prek.toml` or a pre-commit YAML config (default: discover using prek's precedence)
+- `--config-path` / `-c`: Path to `prek.toml` or a pre-commit YAML config (default: discover using prek's precedence). The previous `--pch-config-path` name remains supported.
 - `--hook-name` / `-n`: Optional hook name to limit dependency updates to a specific hook
 - `--package-manager` / `-p`: Package manager to use (`poetry` or `uv`, default: `poetry`)
 - `--lockfile-path` / `-l`: Path to lockfile (default: `<package-manager>.lock` in repo root)

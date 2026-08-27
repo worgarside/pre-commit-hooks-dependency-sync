@@ -272,6 +272,7 @@ def main() -> None:
     parser.add_argument(
         "-c",
         "--config-path",
+        "--pch-config-path",
         type=Path,
         required=False,
         help="Path to prek.toml or a pre-commit YAML config",

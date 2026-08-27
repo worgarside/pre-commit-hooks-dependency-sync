@@ -78,7 +78,6 @@ repos:
           - --show-error-codes
         additional_dependencies:
           - packaging==26.0
-          - pytest==9.1.1
           - tomli==2.4.0
           - tomlkit==0.15.1
           - ruamel-yaml==0.19.1
