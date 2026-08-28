@@ -5,6 +5,9 @@ on:
   push:
     branches:
       - main
+    paths:
+      - pre_commit_hooks_dependency_sync/**
+      - '!pre_commit_hooks_dependency_sync/__init__.py'
 
   workflow_dispatch:
     inputs:
@@ -30,7 +33,7 @@ concurrency:
 jobs:
   release:
     name: Release
-    uses: worganisation/github-config-files/.github/workflows/__semantic-release.yml@0.6.2
+    uses: worganisation/github-config-files/.github/workflows/__semantic-release.yml@0.7.1
     with:
       python-version: '3.13'
       force-deployment: ${{ inputs.force-deployment != 'auto' && inputs.force-deployment || '' }}
