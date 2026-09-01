@@ -14,7 +14,7 @@ on:
       - ready_for_review
 
 concurrency:
-  group: 'prek-hooks-${{ github.ref }}'
+  group: prek-hooks-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
