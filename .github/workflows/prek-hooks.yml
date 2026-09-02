@@ -14,13 +14,13 @@ on:
       - ready_for_review
 
 concurrency:
-  group: prek-hooks-${{ github.ref }}
+  group: 'prek-hooks-${{ github.ref }}'
   cancel-in-progress: true
 
 jobs:
   prek:
     name: Prek Hooks
-    uses: worganisation/github-config-files/.github/workflows/__prek-hooks.yml@0.8.4
+    uses: worganisation/github-config-files/.github/workflows/__prek-hooks.yml@0.8.5
     with:
       python-version: '3.13'
       sync-project-dependencies: 'true'
