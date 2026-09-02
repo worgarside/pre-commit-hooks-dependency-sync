@@ -6,7 +6,7 @@ on:
     branches:
       - main
     paths:
-      - 'pre_commit_hooks_dependency_sync/**'
+      - pre_commit_hooks_dependency_sync/**
       - '!pre_commit_hooks_dependency_sync/__init__.py'
 
   workflow_dispatch:
@@ -36,5 +36,5 @@ jobs:
     uses: worganisation/github-config-files/.github/workflows/__semantic-release.yml@0.8.7
     with:
       python-version: '3.13'
-      force-deployment: "${{ inputs.force-deployment != 'auto' && inputs.force-deployment || '' }}"
+      force-deployment: ${{ inputs.force-deployment != 'auto' && inputs.force-deployment || '' }}
     secrets: inherit
